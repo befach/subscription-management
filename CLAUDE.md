@@ -1,0 +1,503 @@
+# Subscription Management System
+
+## Project Overview
+Organization subscription management system with admin dashboard and public employee submission portal.
+
+**Stack:** Vite + React + Convex (production-ready)
+**Status:** Backend complete, Frontend complete, Build passing
+
+---
+
+## Workflow Orchestration
+
+### 1. Plan Mode Default
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Use plan mode for verification steps, not just building
+- Write detailed specs upfront to reduce ambiguity
+- For this project: plan before touching schema.ts, auth, or multi-file refactors
+
+### 2. Subagent Strategy
+- Use subagents liberally to keep main context window clean
+- Offload research, exploration, and parallel analysis to subagents
+- For complex problems, throw more compute at it via subagents
+- One task per subagent for focused execution
+- Example: Use subagent to explore Convex docs while main agent works on frontend
+
+### 3. Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Ruthlessly iterate on these lessons until mistake rate drops
+- Review lessons at session start for this project
+
+### 4. Verification Before Done
+- Never mark a task complete without proving it works
+- Diff behavior between main and your changes when relevant
+- Ask yourself: "Would a staff engineer approve this?"
+- Run `npm run build` and `npx convex dev` to verify changes
+- Test both public routes (no auth) and admin routes (with auth)
+
+### 5. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+- Skip this for simple, obvious fixes - don't over-engineer
+- Challenge your own work before presenting it
+
+### 6. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Zero context switching required from the user
+- Go fix failing builds without being told how
+
+---
+
+## Task Management
+
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+
+---
+
+## Core Principles
+
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+- **Security Always**: Credentials never exposed to public routes. Audit all vault access.
+- **Type Safety**: Leverage TypeScript and Convex validators. No `any` types.
+
+---
+
+## Project-Specific Rules
+
+### Convex Backend
+- Always define validators in schema.ts before writing queries/mutations
+- Use `v.id("tableName")` for foreign keys, not raw strings
+- Indexes: add `by_status`, `by_renewal` for common query patterns
+- Actions (external API calls) go in `convex/actions/`
+- Internal helpers go in `convex/lib/`
+
+### Frontend (Vite + React)
+- Public routes: `/`, `/subscriptions`, `/submit` - no auth required
+- Admin routes: `/admin/*` - wrap with auth check via useAuth hook
+- Use `useQuery` and `useMutation` from Convex React
+- Loading states: use shadcn Skeleton components
+- Error states: use toast notifications (sonner)
+- Routing: React Router with HashRouter
+
+### Data Handling
+- INR is base currency (exchangeRate = 1)
+- All costs stored in original currency, convert to INR for display
+- Reference numbers: `SUB-YYYY-XXX` for subscriptions, `REQ-YYYY-XXX` for requests
+- Dates: store as ISO strings, display with date-fns
+
+### Security
+- Credentials table: admin-only access, log every view/copy
+- Never return passwords in public queries
+- Validate all inputs with Zod on frontend, Convex validators on backend
+- Admin auth: Convex Auth with email/password
+
+---
+
+## Tech Stack
+
+### Frontend
+- **Framework:** Vite + React 19
+- **Routing:** React Router 7 (HashRouter)
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Charts:** Recharts
+- **Forms:** React Hook Form + Zod
+- **Animations:** Framer Motion
+- **State:** React Context (Auth)
+
+### Backend
+- **Database/Backend:** Convex (serverless)
+- **Auth:** Email/password with bcrypt (Admin only)
+- **External APIs:** ExchangeRate-API (currency rates), Zeptomail (email notifications)
+
+---
+
+## Directory Structure
+
+```
+/ (Root)
+├── convex/                          # BACKEND
+│   ├── _generated/                  # Auto-generated by Convex
+│   ├── schema.ts                    # Database Schema
+│   ├── auth.ts                      # Admin login/logout
+│   ├── subscriptions.ts             # Subscription CRUD
+│   ├── subscriptionRequests.ts      # Public submissions & admin approval
+│   ├── credentials.ts               # Vault with encryption
+│   ├── dashboard.ts                 # Analytics queries
+│   ├── categories.ts                # Category management
+│   ├── currencies.ts                # Currency management
+│   ├── auditLogs.ts                 # Audit trail
+│   ├── crons.ts                     # Scheduled tasks
+│   ├── seed.ts                      # Database seeding
+│   ├── actions/
+│   │   ├── exchangeRates.ts         # ExchangeRate-API integration
+│   │   ├── notifications.ts         # Zeptomail email notifications
+│   │   └── cronHandlers.ts          # Cron logic
+│   └── lib/
+│       ├── permissions.ts           # requireAdmin helper
+│       ├── helpers.ts               # Validation utilities
+│       └── encryption.ts            # Password encryption
+│
+├── src/                             # FRONTEND (Vite + React)
+│   ├── App.tsx                      # HashRouter with routes
+│   ├── main.tsx                     # Entry point
+│   ├── pages/
+│   │   ├── public/                  # Dashboard, Subscriptions, SubmitRequest
+│   │   └── admin/                   # Login, Dashboard, Approvals, Subscriptions, Vault, Currencies, Settings
+│   ├── components/
+│   │   ├── ui/                      # shadcn/ui components
+│   │   ├── layouts/                 # AdminLayout, PublicLayout
+│   │   └── shared/                  # Skeletons, common components
+│   ├── features/                    # Feature-based hooks
+│   │   ├── auth/                    # useAuth
+│   │   ├── subscriptions/           # useSubscriptions
+│   │   ├── requests/                # useSubscriptionRequests
+│   │   ├── vault/                   # useCredentials, useAuditLogs
+│   │   ├── dashboard/               # useDashboardStats
+│   │   ├── categories/              # useCategories
+│   │   └── currencies/              # useCurrencies
+│   ├── providers/                   # ConvexProvider
+│   ├── lib/                         # Utils
+│   └── styles/                      # CSS
+│
+├── tasks/                           # Task tracking
+│   ├── todo.md                      # Current task plan
+│   └── lessons.md                   # Learnings from corrections
+│
+├── public/                          # Static assets
+└── [config files]                   # package.json, tsconfig, tailwind, vite.config
+```
+
+---
+
+## Data Models
+
+### Core Types
+```typescript
+// Subscription
+{ id, referenceNumber, name, description, provider, categoryId, cost, currencyId,
+  billingCycle, nextRenewalDate, paymentMethod, status, notificationSettings, timestamps }
+
+// SubscriptionRequest (Public Submissions)
+{ id, referenceNumber, name, description, provider, categoryId, cost, currencyId,
+  billingCycle, requestedBy, requesterEmail, requesterDepartment, justification,
+  status, adminNotes, reviewedBy, reviewedAt, createdAt }
+
+// Credential (Vault - Admin Only)
+{ id, subscriptionId, username, password, notes, lastAccessedAt, lastAccessedBy }
+
+// Currency
+{ id, code, name, symbol, exchangeRate, isActive }
+
+// Category
+{ id, name, description, color }
+
+// AuditLog
+{ id, subscriptionId, subscriptionName, action, performedBy, performedAt }
+```
+
+### Enums
+- **Billing Cycles:** `'monthly' | 'quarterly' | 'half-yearly' | 'yearly'`
+- **Payment Methods:** `'credit_card' | 'debit_card' | 'bank_transfer' | 'upi' | 'other'`
+- **Subscription Status:** `'active' | 'expired' | 'cancelled' | 'pending'`
+- **Request Status:** `'pending' | 'approved' | 'rejected'`
+
+---
+
+## Routes
+
+### Public (No Auth)
+| Route | Purpose |
+|-------|---------|
+| `/` | Public dashboard (stats overview) |
+| `/subscriptions` | Public subscription list |
+| `/submit` | Employee submission form |
+
+### Admin (Protected)
+| Route | Purpose |
+|-------|---------|
+| `/admin/login` | Admin login |
+| `/admin/dashboard` | Main stats & active subscriptions |
+| `/admin/approvals` | Pending request approvals |
+| `/admin/subscriptions` | Full subscription management |
+| `/admin/vault` | Credential management |
+| `/admin/currencies` | Currency & exchange rates |
+| `/admin/settings` | Admin settings |
+
+---
+
+## Key Features
+
+1. **Subscription Tracking** - CRUD for subscriptions with renewal tracking
+2. **Public Submission** - Employees submit requests without auth
+3. **Approval Workflow** - Admin approves/rejects submissions
+4. **Credential Vault** - Secure storage with audit logs
+5. **Multi-Currency** - INR as base, auto exchange rates via TianAPI
+6. **Analytics** - Spending by category, monthly trends
+7. **Notifications** - Renewal reminders via Telegram/Email
+8. **Scheduled Tasks** - Auto renewal checks, exchange rate updates
+
+---
+
+## Setup Instructions
+
+### First Time Setup
+```bash
+# Install dependencies
+npm install
+
+# Start Convex (creates deployment if needed)
+npx convex dev
+
+# Set required environment variables
+npx convex env set ENCRYPTION_KEY $(openssl rand -hex 32)
+npx convex env set ADMIN_EMAIL admin@yourdomain.com
+npx convex env set ADMIN_PASSWORD <your-secure-password>
+
+# Seed the database
+npx convex run seed:seedDatabase
+```
+
+### Optional Environment Variables
+```bash
+# Exchange rates (https://www.exchangerate-api.com)
+npx convex env set EXCHANGERATE_API_KEY <your-key>
+
+# Email notifications (https://www.zoho.com/zeptomail)
+npx convex env set ZEPTOMAIL_API_KEY <your-zeptomail-api-key>
+npx convex env set NOTIFICATION_FROM_EMAIL notifications@yourdomain.com
+npx convex env set NOTIFICATION_FROM_NAME "Subscription Manager"
+```
+
+---
+
+## Commands
+
+```bash
+# Development (run both in separate terminals)
+npm run dev              # Start Vite dev server (localhost:5173)
+npx convex dev           # Start Convex dev server
+
+# Build & Deploy
+npm run build            # Build for production
+npx convex deploy        # Deploy Convex functions
+
+# Database
+npx convex run seed:seedDatabase    # Seed initial data
+```
+
+---
+
+## Environment Variables
+
+```env
+# Convex (auto-set by npx convex dev)
+CONVEX_DEPLOYMENT=dev:beloved-chickadee-865
+VITE_CONVEX_URL=https://beloved-chickadee-865.convex.cloud
+
+# Required (set via npx convex env set)
+ENCRYPTION_KEY=<32+ char hex string>
+
+# Optional
+ADMIN_EMAIL=admin@yourdomain.com
+ADMIN_PASSWORD=<password>
+EXCHANGERATE_API_KEY=<for currency rates>
+ZEPTOMAIL_API_KEY=<for email notifications>
+NOTIFICATION_FROM_EMAIL=<sender email>
+NOTIFICATION_FROM_NAME=<sender name>
+```
+
+---
+
+## Convex Schema Reference
+
+```typescript
+// convex/schema.ts
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  subscriptions: defineTable({
+    referenceNumber: v.string(),
+    name: v.string(),
+    description: v.string(),
+    provider: v.string(),
+    categoryId: v.id("categories"),
+    cost: v.number(),
+    currencyId: v.id("currencies"),
+    billingCycle: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("half-yearly"),
+      v.literal("yearly")
+    ),
+    nextRenewalDate: v.string(),
+    paymentMethod: v.union(
+      v.literal("credit_card"),
+      v.literal("debit_card"),
+      v.literal("bank_transfer"),
+      v.literal("upi"),
+      v.literal("other")
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("expired"),
+      v.literal("cancelled"),
+      v.literal("pending")
+    ),
+    notificationEnabled: v.boolean(),
+    notificationDaysBefore: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_renewal", ["nextRenewalDate"]),
+
+  requests: defineTable({
+    referenceNumber: v.string(),
+    name: v.string(),
+    description: v.string(),
+    provider: v.string(),
+    categoryId: v.id("categories"),
+    cost: v.number(),
+    currencyId: v.id("currencies"),
+    billingCycle: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("half-yearly"),
+      v.literal("yearly")
+    ),
+    requestedBy: v.string(),
+    requesterEmail: v.string(),
+    requesterDepartment: v.string(),
+    justification: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected")
+    ),
+    adminNotes: v.optional(v.string()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"]),
+
+  credentials: defineTable({
+    subscriptionId: v.id("subscriptions"),
+    username: v.string(),
+    password: v.string(), // TODO: Encrypt in production
+    notes: v.optional(v.string()),
+    lastAccessedAt: v.optional(v.number()),
+    lastAccessedBy: v.optional(v.id("users")),
+  })
+    .index("by_subscription", ["subscriptionId"]),
+
+  currencies: defineTable({
+    code: v.string(),
+    name: v.string(),
+    symbol: v.string(),
+    exchangeRate: v.number(),
+    isActive: v.boolean(),
+  })
+    .index("by_code", ["code"]),
+
+  categories: defineTable({
+    name: v.string(),
+    description: v.string(),
+    color: v.string(),
+  }),
+
+  auditLogs: defineTable({
+    subscriptionId: v.id("subscriptions"),
+    action: v.union(
+      v.literal("viewed"),
+      v.literal("copied"),
+      v.literal("updated")
+    ),
+    performedBy: v.id("users"),
+  })
+    .index("by_subscription", ["subscriptionId"]),
+
+  users: defineTable({
+    email: v.string(),
+    name: v.string(),
+    role: v.literal("admin"),
+  })
+    .index("by_email", ["email"]),
+});
+```
+
+---
+
+## Common Patterns
+
+### Convex Query with Auth Check
+```typescript
+// convex/subscriptions.ts
+import { query } from "./_generated/server";
+import { requireAdmin } from "./lib/permissions";
+
+export const listAll = query({
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return await ctx.db.query("subscriptions").collect();
+  },
+});
+```
+
+### Convex Mutation
+```typescript
+// convex/requests.ts
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const submit = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    // ... other fields
+  },
+  handler: async (ctx, args) => {
+    const referenceNumber = `REQ-${new Date().getFullYear()}-${String(count + 1).padStart(3, "0")}`;
+    return await ctx.db.insert("requests", {
+      ...args,
+      referenceNumber,
+      status: "pending",
+    });
+  },
+});
+```
+
+### Frontend Query Hook
+```typescript
+// In a page component
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+export default function Dashboard() {
+  const subscriptions = useQuery(api.subscriptions.listAll);
+
+  if (subscriptions === undefined) {
+    return <Skeleton />;
+  }
+
+  return <SubscriptionGrid data={subscriptions} />;
+}
+```
+
+---
+
+## Notes
+
+- **Default Currency:** INR (Indian Rupee) with exchangeRate = 1
+- **Exchange Rates:** All rates relative to INR, updated via TianAPI cron
+- **Credentials:** Never expose to public routes, audit all access
+- **Reference Numbers:** Auto-generated (SUB-YYYY-XXX, REQ-YYYY-XXX)
+- **Timestamps:** Convex auto-adds `_creationTime`, use for createdAt
