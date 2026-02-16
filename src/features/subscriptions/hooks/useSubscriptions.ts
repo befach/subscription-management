@@ -5,6 +5,7 @@ import type { Id } from "../../../../convex/_generated/dataModel";
 export function useSubscriptions() {
   const subscriptions = useQuery(api.subscriptions.list);
   const createMutation = useMutation(api.subscriptions.create);
+  const bulkCreateMutation = useMutation(api.subscriptions.bulkCreate);
   const updateMutation = useMutation(api.subscriptions.update);
   const removeMutation = useMutation(api.subscriptions.remove);
 
@@ -12,6 +13,7 @@ export function useSubscriptions() {
     subscriptions,
     isLoading: subscriptions === undefined,
     create: createMutation,
+    bulkCreate: bulkCreateMutation,
     update: updateMutation,
     remove: removeMutation,
   };

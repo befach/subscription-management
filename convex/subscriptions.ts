@@ -256,6 +256,133 @@ export const update = mutation({
   },
 });
 
+// Bulk create subscriptions (admin only)
+export const bulkCreate = mutation({
+  args: {
+    adminEmail: v.string(),
+    subscriptions: v.array(
+      v.object({
+        name: v.string(),
+        description: v.string(),
+        provider: v.string(),
+        categoryId: v.id("categories"),
+        cost: v.number(),
+        currencyId: v.id("currencies"),
+        billingCycle: v.union(
+          v.literal("monthly"),
+          v.literal("quarterly"),
+          v.literal("half-yearly"),
+          v.literal("yearly")
+        ),
+        nextRenewalDate: v.string(),
+        paymentMethod: v.union(
+          v.literal("credit_card"),
+          v.literal("debit_card"),
+          v.literal("bank_transfer"),
+          v.literal("upi"),
+          v.literal("other")
+        ),
+        status: v.union(
+          v.literal("active"),
+          v.literal("expired"),
+          v.literal("cancelled"),
+          v.literal("pending")
+        ),
+        notificationEnabled: v.boolean(),
+        notificationDaysBefore: v.number(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.adminEmail);
+
+    if (args.subscriptions.length > 100) {
+      throw new Error("Maximum 100 subscriptions per bulk import");
+    }
+
+    // Validate all category/currency IDs upfront
+    const categoryIds = [...new Set(args.subscriptions.map((s) => s.categoryId))];
+    const currencyIds = [...new Set(args.subscriptions.map((s) => s.currencyId))];
+
+    const [categories, currencies] = await Promise.all([
+      Promise.all(categoryIds.map((id) => ctx.db.get(id))),
+      Promise.all(currencyIds.map((id) => ctx.db.get(id))),
+    ]);
+
+    const validCategoryIds = new Set(
+      categories.filter(Boolean).map((c) => c!._id.toString())
+    );
+    const validCurrencyIds = new Set(
+      currencies.filter((c) => c && c.isActive).map((c) => c!._id.toString())
+    );
+
+    const results: Array<{
+      index: number;
+      success: boolean;
+      referenceNumber?: string;
+      error?: string;
+    }> = [];
+
+    for (let i = 0; i < args.subscriptions.length; i++) {
+      const sub = args.subscriptions[i];
+
+      try {
+        const { name, description, provider } = validateAndSanitizeCommonFields({
+          name: sub.name,
+          description: sub.description,
+          provider: sub.provider,
+        });
+        validateCost(sub.cost);
+
+        if (!validateDateString(sub.nextRenewalDate)) {
+          throw new Error("Invalid renewal date");
+        }
+        validateNotificationDays(sub.notificationDaysBefore);
+
+        if (!validCategoryIds.has(sub.categoryId.toString())) {
+          throw new Error("Invalid category");
+        }
+        if (!validCurrencyIds.has(sub.currencyId.toString())) {
+          throw new Error("Invalid or inactive currency");
+        }
+
+        const referenceNumber = await generateReferenceNumber(ctx, "subscription");
+
+        await ctx.db.insert("subscriptions", {
+          name,
+          description,
+          provider,
+          categoryId: sub.categoryId,
+          cost: sub.cost,
+          currencyId: sub.currencyId,
+          billingCycle: sub.billingCycle,
+          nextRenewalDate: sub.nextRenewalDate,
+          paymentMethod: sub.paymentMethod,
+          status: sub.status,
+          notificationEnabled: sub.notificationEnabled,
+          notificationDaysBefore: sub.notificationDaysBefore,
+          referenceNumber,
+        });
+
+        results.push({ index: i, success: true, referenceNumber });
+      } catch (err) {
+        results.push({
+          index: i,
+          success: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
+    }
+
+    return {
+      total: args.subscriptions.length,
+      succeeded: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
+      results,
+    };
+  },
+});
+
 // Delete subscription (admin only)
 export const remove = mutation({
   args: {

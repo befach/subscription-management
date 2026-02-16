@@ -96,7 +96,7 @@ export function validateNotificationDays(days: number, maxDays = 365): void {
 export interface CommonFieldsInput {
   name: string;
   description: string;
-  provider: string;
+  provider?: string;
 }
 
 export interface SanitizedCommonFields {
@@ -113,7 +113,7 @@ export function validateAndSanitizeCommonFields(
 
   const name = sanitizeString(input.name);
   const description = sanitizeString(input.description);
-  const provider = sanitizeString(input.provider);
+  const provider = input.provider ? sanitizeString(input.provider) : "";
 
   validateStringLength(name, "Subscription name", 1, 200);
 
@@ -123,7 +123,9 @@ export function validateAndSanitizeCommonFields(
     throw new Error(`Description must not exceed ${descriptionMax} characters`);
   }
 
-  validateStringLength(provider, "Provider", 1, 200);
+  if (provider) {
+    validateStringLength(provider, "Provider", 1, 200);
+  }
 
   return { name, description, provider };
 }

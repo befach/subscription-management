@@ -81,15 +81,9 @@ export default function SubmitRequest() {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.name && formData.description && formData.provider && formData.categoryId;
+        return formData.name && formData.description && formData.categoryId;
       case 2:
-        return (
-          formData.cost &&
-          formData.requestedBy &&
-          formData.requesterEmail &&
-          formData.requesterDepartment &&
-          formData.justification
-        );
+        return formData.cost;
       default:
         return true;
     }
@@ -113,15 +107,15 @@ export default function SubmitRequest() {
       const result = await submit({
         name: formData.name,
         description: formData.description,
-        provider: formData.provider,
+        provider: formData.provider || undefined,
         categoryId: formData.categoryId as Id<"categories">,
         cost: parseFloat(formData.cost),
         currencyId: formData.currencyId as Id<"currencies">,
         billingCycle: formData.billingCycle,
-        requestedBy: formData.requestedBy,
-        requesterEmail: formData.requesterEmail,
-        requesterDepartment: formData.requesterDepartment,
-        justification: formData.justification,
+        requestedBy: formData.requestedBy || undefined,
+        requesterEmail: formData.requesterEmail || undefined,
+        requesterDepartment: formData.requesterDepartment || undefined,
+        justification: formData.justification || undefined,
       });
 
       setSubmittedReferenceNumber(result.referenceNumber);
@@ -305,7 +299,7 @@ export default function SubmitRequest() {
                   </div>
                   <div>
                     <Label htmlFor="provider" className="text-sm font-medium">
-                      Provider <span className="text-red-500">*</span>
+                      Provider <span className="text-gray-400 font-normal">(Optional)</span>
                     </Label>
                     <Input
                       id="provider"
@@ -400,12 +394,12 @@ export default function SubmitRequest() {
                   <div className="border-t border-slate-200 pt-5">
                     <h4 className="font-medium text-gray-900 mb-4 flex items-center gap-2">
                       <User className="w-4 h-4" />
-                      Your Information
+                      Your Information <span className="text-sm font-normal text-gray-400">(Optional)</span>
                     </h4>
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="requestedBy" className="text-sm font-medium">
-                          Full Name <span className="text-red-500">*</span>
+                          Full Name
                         </Label>
                         <Input
                           id="requestedBy"
@@ -417,7 +411,7 @@ export default function SubmitRequest() {
                       </div>
                       <div>
                         <Label htmlFor="requesterEmail" className="text-sm font-medium">
-                          Email <span className="text-red-500">*</span>
+                          Email
                         </Label>
                         <Input
                           id="requesterEmail"
@@ -430,7 +424,7 @@ export default function SubmitRequest() {
                       </div>
                       <div>
                         <Label htmlFor="requesterDepartment" className="text-sm font-medium">
-                          Department <span className="text-red-500">*</span>
+                          Department
                         </Label>
                         <Input
                           id="requesterDepartment"
@@ -444,7 +438,7 @@ export default function SubmitRequest() {
                   </div>
                   <div>
                     <Label htmlFor="justification" className="text-sm font-medium">
-                      Justification <span className="text-red-500">*</span>
+                      Justification <span className="text-gray-400 font-normal">(Optional)</span>
                     </Label>
                     <Textarea
                       id="justification"
@@ -478,39 +472,49 @@ export default function SubmitRequest() {
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Provider</p>
-                        <p className="font-medium">{formData.provider}</p>
-                      </div>
+                      {formData.provider && (
+                        <div>
+                          <p className="text-sm text-gray-500">Provider</p>
+                          <p className="font-medium">{formData.provider}</p>
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm text-gray-500">Cost</p>
                         <p className="font-medium">
                           {selectedCurrency?.symbol}{formData.cost} / {formData.billingCycle}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Requested By</p>
-                        <p className="font-medium">{formData.requestedBy}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Department</p>
-                        <p className="font-medium">{formData.requesterDepartment}</p>
-                      </div>
+                      {formData.requestedBy && (
+                        <div>
+                          <p className="text-sm text-gray-500">Requested By</p>
+                          <p className="font-medium">{formData.requestedBy}</p>
+                        </div>
+                      )}
+                      {formData.requesterDepartment && (
+                        <div>
+                          <p className="text-sm text-gray-500">Department</p>
+                          <p className="font-medium">{formData.requesterDepartment}</p>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Description</p>
                       <p className="text-sm text-gray-700 mt-1">{formData.description}</p>
                     </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Justification</p>
-                      <p className="text-sm text-gray-700 mt-1">{formData.justification}</p>
-                    </div>
+                    {formData.justification && (
+                      <div>
+                        <p className="text-sm text-gray-500">Justification</p>
+                        <p className="text-sm text-gray-700 mt-1">{formData.justification}</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                     <p className="text-sm text-amber-800">
                       <strong>Note:</strong> Your request will be reviewed by the admin team.
-                      You will be notified via email once a decision is made.
+                      {formData.requesterEmail
+                        ? ' You will be notified via email once a decision is made.'
+                        : ' Provide your email above if you\'d like to be notified of the decision.'}
                     </p>
                   </div>
                 </div>
