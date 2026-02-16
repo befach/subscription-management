@@ -74,7 +74,7 @@ export default function Approvals() {
     return reqs.filter(
       (r) =>
         r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.requestedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (r.requestedBy?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
         r.referenceNumber.toLowerCase().includes(searchQuery.toLowerCase())
     );
   };
@@ -160,7 +160,7 @@ export default function Approvals() {
         <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
           <div className="flex items-center gap-2 text-gray-600">
             <Building className="w-4 h-4 text-gray-400" />
-            <span className="truncate">{request.provider}</span>
+            <span className="truncate">{request.provider || 'Not specified'}</span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
             <DollarSign className="w-4 h-4 text-gray-400" />
@@ -172,7 +172,7 @@ export default function Approvals() {
           <div className="flex items-center gap-2 text-gray-600">
             <User className="w-4 h-4 text-gray-400" />
             <span className="truncate">
-              {request.requestedBy}
+              {request.requestedBy || 'Anonymous'}
             </span>
           </div>
           <div className="flex items-center gap-2 text-gray-600">
@@ -355,7 +355,7 @@ export default function Approvals() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Provider</p>
-                  <p className="font-medium">{selectedRequest.provider}</p>
+                  <p className="font-medium">{selectedRequest.provider || 'Not specified'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Category</p>
@@ -372,15 +372,15 @@ export default function Approvals() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Requested By</p>
-                  <p className="font-medium">{selectedRequest.requestedBy}</p>
+                  <p className="font-medium">{selectedRequest.requestedBy || 'Anonymous'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Department</p>
-                  <p className="font-medium">{selectedRequest.requesterDepartment}</p>
+                  <p className="font-medium">{selectedRequest.requesterDepartment || 'Not specified'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Email</p>
-                  <p className="font-medium">{selectedRequest.requesterEmail}</p>
+                  <p className="font-medium">{selectedRequest.requesterEmail || 'Not provided'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Submitted On</p>
@@ -391,10 +391,12 @@ export default function Approvals() {
                 <p className="text-sm text-gray-500 mb-1">Description</p>
                 <p className="text-sm">{selectedRequest.description}</p>
               </div>
-              <div className="bg-slate-50 p-4 rounded-xl">
-                <p className="text-sm text-gray-500 mb-1">Justification</p>
-                <p className="text-sm">{selectedRequest.justification}</p>
-              </div>
+              {selectedRequest.justification && (
+                <div className="bg-slate-50 p-4 rounded-xl">
+                  <p className="text-sm text-gray-500 mb-1">Justification</p>
+                  <p className="text-sm">{selectedRequest.justification}</p>
+                </div>
+              )}
               {selectedRequest.adminNotes && (
                 <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
                   <p className="text-sm text-amber-700 mb-1">Admin Notes</p>

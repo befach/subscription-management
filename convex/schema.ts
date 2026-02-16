@@ -69,7 +69,7 @@ export default defineSchema({
     referenceNumber: v.string(),
     name: v.string(),
     description: v.string(),
-    provider: v.string(),
+    provider: v.optional(v.string()),
     categoryId: v.id("categories"),
     cost: v.number(),
     currencyId: v.id("currencies"),
@@ -79,10 +79,10 @@ export default defineSchema({
       v.literal("half-yearly"),
       v.literal("yearly")
     ),
-    requestedBy: v.string(),
-    requesterEmail: v.string(),
-    requesterDepartment: v.string(),
-    justification: v.string(),
+    requestedBy: v.optional(v.string()),
+    requesterEmail: v.optional(v.string()),
+    requesterDepartment: v.optional(v.string()),
+    justification: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("approved"),

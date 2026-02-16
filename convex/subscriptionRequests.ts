@@ -87,7 +87,7 @@ export const submit = mutation({
   args: {
     name: v.string(),
     description: v.string(),
-    provider: v.string(),
+    provider: v.optional(v.string()),
     categoryId: v.id("categories"),
     cost: v.number(),
     currencyId: v.id("currencies"),
@@ -97,10 +97,10 @@ export const submit = mutation({
       v.literal("half-yearly"),
       v.literal("yearly")
     ),
-    requestedBy: v.string(),
-    requesterEmail: v.string(),
-    requesterDepartment: v.string(),
-    justification: v.string(),
+    requestedBy: v.optional(v.string()),
+    requesterEmail: v.optional(v.string()),
+    requesterDepartment: v.optional(v.string()),
+    justification: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Input validation using shared helpers
@@ -109,10 +109,10 @@ export const submit = mutation({
       { descriptionMin: 10 }
     );
 
-    const requestedBy = sanitizeString(args.requestedBy);
-    const requesterEmail = args.requesterEmail.toLowerCase().trim();
-    const requesterDepartment = sanitizeString(args.requesterDepartment);
-    const justification = sanitizeString(args.justification);
+    const requestedBy = args.requestedBy ? sanitizeString(args.requestedBy) : undefined;
+    const requesterEmail = args.requesterEmail ? args.requesterEmail.toLowerCase().trim() : undefined;
+    const requesterDepartment = args.requesterDepartment ? sanitizeString(args.requesterDepartment) : undefined;
+    const justification = args.justification ? sanitizeString(args.justification) : undefined;
 
     // Cost must be positive for requests
     if (args.cost <= 0) {
@@ -120,36 +120,46 @@ export const submit = mutation({
     }
     validateCost(args.cost);
 
-    validateStringLength(requestedBy, "Name", 2, 100);
-
-    if (!validateEmail(requesterEmail)) {
-      throw new Error("Invalid email address format");
+    // Only validate optional fields if provided
+    if (requestedBy) {
+      validateStringLength(requestedBy, "Name", 2, 100);
     }
 
-    // Email length check (prevent oversized email addresses)
-    if (requesterEmail.length > 254) {
-      throw new Error("Email address is too long");
+    if (requesterEmail) {
+      if (!validateEmail(requesterEmail)) {
+        throw new Error("Invalid email address format");
+      }
+      if (requesterEmail.length > 254) {
+        throw new Error("Email address is too long");
+      }
     }
 
-    validateStringLength(requesterDepartment, "Department", 2, 100);
-    validateStringLength(justification, "Justification", 20, 2000);
+    if (requesterDepartment) {
+      validateStringLength(requesterDepartment, "Department", 2, 100);
+    }
+
+    if (justification) {
+      validateStringLength(justification, "Justification", 20, 2000);
+    }
 
     // Total payload size check (prevent memory exhaustion)
-    const totalSize = name.length + description.length + provider.length +
-                      requestedBy.length + requesterEmail.length +
-                      requesterDepartment.length + justification.length;
+    const totalSize = name.length + description.length + (provider?.length || 0) +
+                      (requestedBy?.length || 0) + (requesterEmail?.length || 0) +
+                      (requesterDepartment?.length || 0) + (justification?.length || 0);
     if (totalSize > 5000) {
       throw new Error("Request data exceeds maximum allowed size");
     }
 
-    // Parallel fetch: rate limits + validation data (4 queries at once)
+    // Parallel fetch: rate limits + validation data
     const now = Date.now();
     const windowStart = now - RATE_LIMIT_WINDOW_MS;
-    const emailKey = `email:${requesterEmail}`;
+    const emailKey = requesterEmail ? `email:${requesterEmail}` : null;
 
     const [globalLimit, emailLimit, category, currency] = await Promise.all([
       ctx.db.query("rateLimits").withIndex("by_key", (q) => q.eq("key", "global")).unique(),
-      ctx.db.query("rateLimits").withIndex("by_key", (q) => q.eq("key", emailKey)).unique(),
+      emailKey
+        ? ctx.db.query("rateLimits").withIndex("by_key", (q) => q.eq("key", emailKey)).unique()
+        : Promise.resolve(null),
       ctx.db.get(args.categoryId),
       ctx.db.get(args.currencyId),
     ]);
@@ -181,14 +191,16 @@ export const submit = mutation({
       }
     }
 
-    // Email counter
-    if (emailLimit && emailLimit.windowStart > windowStart) {
-      await ctx.db.patch(emailLimit._id, { count: emailLimit.count + 1 });
-    } else {
-      if (emailLimit) {
-        await ctx.db.patch(emailLimit._id, { windowStart: now, count: 1 });
+    // Email counter (only if email provided)
+    if (emailKey) {
+      if (emailLimit && emailLimit.windowStart > windowStart) {
+        await ctx.db.patch(emailLimit._id, { count: emailLimit.count + 1 });
       } else {
-        await ctx.db.insert("rateLimits", { key: emailKey, windowStart: now, count: 1 });
+        if (emailLimit) {
+          await ctx.db.patch(emailLimit._id, { windowStart: now, count: 1 });
+        } else {
+          await ctx.db.insert("rateLimits", { key: emailKey, windowStart: now, count: 1 });
+        }
       }
     }
 
@@ -209,13 +221,12 @@ export const submit = mutation({
     });
 
     // Send notification to admin about new request (fire and forget)
-    // Note: This runs as a scheduled action, doesn't block the response
     try {
       await ctx.scheduler.runAfter(0, internal.actions.notifications.sendNewRequestNotification, {
         requestName: name,
         referenceNumber,
-        requesterName: requestedBy,
-        requesterDepartment,
+        requesterName: requestedBy || "Unknown",
+        requesterDepartment: requesterDepartment || "Unknown",
         cost: args.cost,
         currencySymbol: currency.symbol,
       });
@@ -284,7 +295,7 @@ export const approve = mutation({
       referenceNumber: subscriptionRef,
       name: request.name,
       description: request.description,
-      provider: request.provider,
+      provider: request.provider || "",
       categoryId: request.categoryId,
       cost: request.cost,
       currencyId: request.currencyId,
@@ -304,18 +315,20 @@ export const approve = mutation({
       reviewedAt: new Date().toISOString(),
     });
 
-    // Notify requester of approval
-    try {
-      await ctx.scheduler.runAfter(0, internal.actions.notifications.sendRequestApprovalNotification, {
-        requestName: request.name,
-        referenceNumber: request.referenceNumber,
-        status: "approved" as const,
-        adminNotes,
-        recipientEmail: request.requesterEmail,
-        requesterName: request.requestedBy,
-      });
-    } catch {
-      console.error("Failed to schedule approval notification");
+    // Notify requester of approval (only if email provided)
+    if (request.requesterEmail) {
+      try {
+        await ctx.scheduler.runAfter(0, internal.actions.notifications.sendRequestApprovalNotification, {
+          requestName: request.name,
+          referenceNumber: request.referenceNumber,
+          status: "approved" as const,
+          adminNotes,
+          recipientEmail: request.requesterEmail,
+          requesterName: request.requestedBy || "User",
+        });
+      } catch {
+        console.error("Failed to schedule approval notification");
+      }
     }
 
     return { requestId: args.id, subscriptionId };
@@ -356,18 +369,20 @@ export const reject = mutation({
       reviewedAt: new Date().toISOString(),
     });
 
-    // Notify requester of rejection
-    try {
-      await ctx.scheduler.runAfter(0, internal.actions.notifications.sendRequestApprovalNotification, {
-        requestName: request.name,
-        referenceNumber: request.referenceNumber,
-        status: "rejected" as const,
-        adminNotes,
-        recipientEmail: request.requesterEmail,
-        requesterName: request.requestedBy,
-      });
-    } catch {
-      console.error("Failed to schedule rejection notification");
+    // Notify requester of rejection (only if email provided)
+    if (request.requesterEmail) {
+      try {
+        await ctx.scheduler.runAfter(0, internal.actions.notifications.sendRequestApprovalNotification, {
+          requestName: request.name,
+          referenceNumber: request.referenceNumber,
+          status: "rejected" as const,
+          adminNotes,
+          recipientEmail: request.requesterEmail,
+          requesterName: request.requestedBy || "User",
+        });
+      } catch {
+        console.error("Failed to schedule rejection notification");
+      }
     }
 
     return args.id;
