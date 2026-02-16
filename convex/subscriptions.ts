@@ -160,7 +160,7 @@ export const create = mutation({
     return await ctx.db.insert("subscriptions", {
       name,
       description,
-      provider,
+      provider: provider ?? "",
       categoryId: args.categoryId,
       cost: args.cost,
       currencyId: args.currencyId,
@@ -351,7 +351,7 @@ export const bulkCreate = mutation({
         await ctx.db.insert("subscriptions", {
           name,
           description,
-          provider,
+          provider: provider ?? "",
           categoryId: sub.categoryId,
           cost: sub.cost,
           currencyId: sub.currencyId,

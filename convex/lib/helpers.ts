@@ -102,7 +102,7 @@ export interface CommonFieldsInput {
 export interface SanitizedCommonFields {
   name: string;
   description: string;
-  provider: string;
+  provider?: string;
 }
 
 export function validateAndSanitizeCommonFields(
@@ -113,7 +113,7 @@ export function validateAndSanitizeCommonFields(
 
   const name = sanitizeString(input.name);
   const description = sanitizeString(input.description);
-  const provider = input.provider ? sanitizeString(input.provider) : "";
+  const provider = input.provider ? sanitizeString(input.provider) : undefined;
 
   validateStringLength(name, "Subscription name", 1, 200);
 

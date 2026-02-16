@@ -207,7 +207,7 @@ export const submit = mutation({
     const id = await ctx.db.insert("subscriptionRequests", {
       name,
       description,
-      provider: provider || undefined,
+      provider,
       categoryId: args.categoryId,
       cost: args.cost,
       currencyId: args.currencyId,
