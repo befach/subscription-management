@@ -21,6 +21,7 @@ export default defineConfig({
           'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-tooltip'],
           'vendor-charts': ['recharts'],
           'vendor-motion': ['framer-motion'],
+          'vendor-xlsx': ['xlsx'],
           // Convex in separate chunk
           'vendor-convex': ['convex/react'],
         },

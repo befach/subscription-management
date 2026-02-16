@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Plus, Filter, X, CreditCard } from 'lucide-react';
+import { Search, Plus, Filter, X, CreditCard, Upload } from 'lucide-react';
 import { useSubscriptions } from '@/features/subscriptions';
 import { useCategories } from '@/features/categories';
 import { useCurrencies } from '@/features/currencies';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SubscriptionCard } from './SubscriptionCard';
 import { AddDialog, ViewDialog, EditDialog, DeleteDialog } from './SubscriptionDialogs';
+import { BulkImportDialog } from './BulkImportDialog';
 import { initialFormData } from './types';
 import type { FormData, Subscription } from './types';
 import type { Id } from '../../../../convex/_generated/dataModel';
@@ -38,6 +39,7 @@ export default function AdminSubscriptions() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSaving, setIsSaving] = useState(false);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
 
   const filteredSubscriptions = useMemo(() => {
     if (!subscriptions) return [];
@@ -175,16 +177,25 @@ export default function AdminSubscriptions() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Subscriptions</h1>
           <p className="text-gray-500 mt-1">Manage all organization subscriptions</p>
         </div>
-        <Button
-          onClick={() => {
-            setFormData(initialFormData);
-            setIsAddOpen(true);
-          }}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Subscription
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsBulkImportOpen(true)}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
+          </Button>
+          <Button
+            onClick={() => {
+              setFormData(initialFormData);
+              setIsAddOpen(true);
+            }}
+            className="bg-gradient-to-r from-blue-600 to-indigo-600"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Subscription
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -313,6 +324,13 @@ export default function AdminSubscriptions() {
         subscriptionName={selectedSubscription?.name}
         onConfirm={handleDelete}
         isDeleting={isSaving}
+      />
+
+      <BulkImportDialog
+        open={isBulkImportOpen}
+        onOpenChange={setIsBulkImportOpen}
+        categories={categories}
+        currencies={currencies}
       />
     </motion.div>
   );
