@@ -86,20 +86,11 @@ export function parseDate(value: string): string | null {
     if (!isNaN(date.getTime())) return trimmed;
   }
 
-  // DD/MM/YYYY or DD-MM-YYYY (common in India)
+  // DD/MM/YYYY or DD-MM-YYYY (Indian format)
   const dmyMatch = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
   if (dmyMatch) {
     const [, d, m, y] = dmyMatch;
     const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-    if (!isNaN(date.getTime())) {
-      return date.toISOString().split("T")[0];
-    }
-  }
-
-  // MM/DD/YYYY
-  const mdyMatch = trimmed.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/);
-  if (mdyMatch) {
-    const date = new Date(trimmed);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split("T")[0];
     }
