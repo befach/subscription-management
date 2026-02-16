@@ -139,7 +139,7 @@ export const submit = mutation({
     }
 
     if (justification) {
-      validateStringLength(justification, "Justification", 10, 2000);
+      validateStringLength(justification, "Justification", 20, 2000);
     }
 
     // Total payload size check (prevent memory exhaustion)
